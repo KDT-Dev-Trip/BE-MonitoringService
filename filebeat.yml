@@ -1,0 +1,19 @@
+# Filebeat 설정 (filebeat.yml)
+# 로그를 읽어 Logstash로 전송
+
+# 로그 소스 정의
+filebeat.inputs:
+  - type: container
+    paths: # 컨테이너 내부의 로그 파일 경로 지정 - 다른 서비스 컨테이너의 로그가 저장되는 위치와 동일해야 함
+      - /var/log/app/*.log
+    multiline: # 로그 시작점을 기준으로 다음 줄들을 하나의 이벤트로 묶기
+      pattern: '^{"timestamp":'
+      negate: true
+      match: after
+    processors:
+      - add_host_metadata: ~
+      - add_kubernetes_metadata: ~
+
+# Logstash 출력 설정
+output.logstash:
+  hosts: ["logstash:5044"]

@@ -1,0 +1,57 @@
+version: '3.8'
+services:
+
+  aisvc:
+    image: ai-evaluation-service:latest
+    ports:
+      - "8084:8084"
+    volumes:
+      - aisvc_logssvc_logs:/var/log/app
+    logging:
+      driver: "json-file"
+
+  # Filebeat (Svc 로그를 Logstash로 보냄)
+  aisvc-filebeat:
+    image: docker.elastic.co/beats/filebeat:8.6.0
+    container_name: aisvc_filebeat
+    volumes:
+      - aisvc_logs:/var/log/app
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
+    user: root
+    depends_on:
+      - logstash
+
+  # --------------------
+  # ELK 스택 (MonitoringSvc에서 관리)
+  # --------------------
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.6.0
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.6.0
+    ports:
+      - "5044:5044"
+    volumes:
+      - ./logstash-pipeline.conf:/usr/share/logstash/pipeline/logstash.conf
+    depends_on:
+      - elasticsearch
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.6.0
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
+volumes:
+  aisvc_logs:
+  esdata:
