@@ -6,18 +6,23 @@ services:
     ports:
       - "8084:8084"
     volumes:
-      - aisvc_logssvc_logs:/var/log/app
+      - aisvc_logs:/var/log/app
     logging:
       driver: "json-file"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
+      - AWS_SECRET_KEY=${AWS_SECRET_KEY}
 
   # Filebeat (Svc 로그를 Logstash로 보냄)
   aisvc-filebeat:
     image: docker.elastic.co/beats/filebeat:8.6.0
     container_name: aisvc_filebeat
     volumes:
-      - aisvc_logs:/var/log/app
+      - aisvc_logs:/var/log/app:ro
       - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
     user: root
+    entrypoint: sh -c "chmod 644 /usr/share/filebeat/filebeat.yml && /usr/local/bin/docker-entrypoint -e"
     depends_on:
       - logstash
 
